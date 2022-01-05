@@ -457,8 +457,8 @@
     <string name="lang_bg">Búlgaro</string>
     <string name="lang_ca">Catalão</string>
     <string name="lang_hr">Croata</string>
-    <string name="lang_cs">Tcheco</string>
-    <string name="lang_da">Dinamarquês</string>
+    <string name="lang_cs">Tcheca</string>
+    <string name="lang_da">Dinamarquesa</string>
     <string name="lang_nl">Holandês</string>
     <string name="lang_fi">Finlandês</string>
     <string name="lang_fr">Francês</string>
@@ -1889,7 +1889,7 @@
     <string name="osmand_plus_banner_desc">Download ilimitado de mapas, atualizações e complemento Wikipédia.</string>
     <string name="si_mi_meters">Milhas/metros</string>
     <string name="skip_map_downloading">Pular download de mapas</string>
-    <string name="skip_map_downloading_desc">Você não possui mapas offline. Você pode selecionar um mapa da lista ou baixar mapas mais tarde pelo \'Menu - %1$s\'.</string>
+    <string name="skip_map_downloading_desc">Você não possui mapas offline. Você pode selecionar um mapa da lista ou baixar mapas mais tarde pelo \"Menu → \"%1$s\".</string>
     <string name="search_another_country">Selecione outra região</string>
     <string name="search_map">Procurando mapas…</string>
     <string name="first_usage_wizard_desc">Deixe o OsmAnd determinar o seu local e sugerir mapas da região para baixar.</string>
@@ -3535,7 +3535,7 @@
     <string name="lang_gu">Guzerate</string>
     <string name="lang_cv">Tchuvache</string>
     <string name="lang_ce">Checheno</string>
-    <string name="lang_bar">Bávaro</string>
+    <string name="lang_bar">Bávara</string>
     <string name="lang_ba">Basquir</string>
     <string name="lang_an">Aragonês</string>
     <string name="lang_lmo">Lombardo</string>
@@ -3787,7 +3787,7 @@
     <string name="sort_name_descending">Nome: Z – A</string>
     <string name="sort_name_ascending">Nome: A – Z</string>
     <string name="start_finish_icons">Ícones de início e término</string>
-    <string name="contour_lines_thanks">Obrigado por adquirir \'curvas de nível\'</string>
+    <string name="contour_lines_thanks">Obrigado por adquirir \"curvas de nível\"</string>
     <string name="osm_live_payment_desc_hw">A assinatura é cobrada de acordo com o período selecionado. Cancele em seu AppGallery a qualquer momento.</string>
     <string name="osm_live_payment_subscription_management_hw">O pagamento é cobrado da sua conta AppGallery ao confirmar a compra.
 \n
@@ -4383,6 +4383,10 @@
 \n
 \n - Atualização da interface do usuário para busca de coordenadas UTM
 \n
+\n • Filtro GPS para trilhas GPX
+\n
+\n • Widget de elevação (Pro)
+\n
 \n - Favoritos: adicionada a capacidade de visualizar ícones usados recentemente
 \n
 \n - Planeamento de rotas: utilizará o perfil selecionado após o lançamento
@@ -4403,16 +4407,16 @@
     <string name="shared_string_travelbooks">Livros de viagem</string>
     <string name="display_route_tracks">Exibir trilhas</string>
     <string name="display_route_tracks_as_poi">Exibir trilhas como POI</string>
-    <string name="quick_action_toggle_preference">Uma alternância para alternar o estado de preferência selecionado.</string>
-    <string name="delete_history_items_descr">Tem certeza de que deseja apagar os itens selecionados do histórico\?</string>
+    <string name="quick_action_toggle_preference">Um botão de alternância para alterar a preferência.</string>
+    <string name="delete_history_items_descr">Excluir itens de histórico selecionados\?</string>
     <string name="delete_history_items">Apagar itens do histórico %1$s\?</string>
     <string name="progress_complete">%1$s completo</string>
-    <string name="storage_found_files_descr">Toque em “%1$s” para copiar %2$s arquivos de “%3$s” para “%4$s”. Pode levar algum tempo.</string>
+    <string name="storage_found_files_descr">Toque em \"%1$s\" para copiar %2$s arquivos de \"%3$s\" para \"%4$s\". Pode levar algum tempo.</string>
     <string name="storage_copied_files_size">Foram copiados %1$s arquivos (%2$s)</string>
     <string name="storage_copying_files_size">Copiando %1$s arquivos (%2$s)</string>
     <string name="shared_storage_second_step">Clique em \"Usar esta pasta\".</string>
     <string name="folder_access_denied">É necessária permissão para acessar a pasta selecionada.</string>
-    <string name="copying_completed">Cópia concluída</string>
+    <string name="copying_completed">Copiado</string>
     <string name="shared_string_copy_to">Copiar para</string>
     <string name="skip_confirmation">Sim, pular</string>
     <string name="shared_storage">Armazenamento compartilhado</string>
@@ -4422,18 +4426,75 @@
     <string name="icon_group_industrial">Industrial</string>
     <string name="rendering_attr_natureReserves_description">Mostre reservas naturais, áreas protegidas e parques nacionais.</string>
     <string name="files_remaining">Arquivos restantes: %1$s %2$s</string>
-    <string name="copying_file">Copiando arquivo %1$s</string>
+    <string name="copying_file">Copiando arquivo %1$s…</string>
     <string name="from_to_with_params">De %1$s para %2$s</string>
     <string name="storage_found_files_size">Encontrados %1$s arquivos (%2$s)</string>
-    <string name="shared_string_skip_warning">Tem certeza de que deseja pular a migração\? OsmAnd não tem mais acesso aos seus arquivos no armazenamento compartilhado.
+    <string name="shared_string_skip_warning">Saltar a migração\? OsmAnd não tem mais acesso aos seus arquivos em armazenamento compartilhado.
 \n
-\nO aplicativo será iniciado na nova pasta com seus dados.</string>
-    <string name="shared_storage_last_step">Você poderá especificar um novo armazenamento de dados após selecionar armazenamento compartilhado.</string>
+\nO aplicativo começará a usar sua nova pasta de dados.</string>
+    <string name="shared_storage_last_step">Você pode especificar uma nova pasta de dados posteriormente.</string>
     <string name="start_copying">Comece a copiar</string>
-    <string name="shared_storage_third_step">Dê permissão para acessar a pasta. Sem esta permissão, OsmAnd não pode copiar arquivos.</string>
+    <string name="shared_storage_third_step">Conceda permissão para acessar a pasta. Sem ele, OsmAnd não pode copiar arquivos.</string>
     <string name="shared_storage_first_step">Pressione \"%1$s\".
 \nO gerenciador de arquivos é aberto onde você precisa encontrar e abrir a pasta osmand.</string>
-    <string name="shared_storage_migration_descr">Devido a mudanças nas regras de acesso ao armazenamento no Android, OsmAnd não pode mais usar %1$s.
+    <string name="shared_storage_migration_descr">Devido a mudanças no acesso ao armazenamento do Android, OsmAnd não pode mais usar %1$s.
 \n
-\nVocê precisa copiar todos os seus dados para o novo local de armazenamento.</string>
+\nCopie todos os seus dados para a nova pasta.</string>
+    <string name="show_parameter_seekbar">Mostrar a barra de busca de parâmetros</string>
+    <string name="add_to_group">Adicionar ao grupo</string>
+    <string name="app_modes_options">Escolha os modos de aplicativo</string>
+    <string name="shared_string_memory">Memória</string>
+    <string name="memory_allocated_for_routing">Memória alocada para roteamento</string>
+    <string name="no_items_selected_warning">Selecione pelo menos um item</string>
+    <string name="display_groups_visibility_dialog_description">Você pode controlar a visibilidade do grupo no mapa. Se a trilha estiver oculta, todos os grupos também serão ocultados.</string>
+    <string name="shared_string_hide_all">Esconda tudo</string>
+    <string name="migration_files_present">Existem %1$d arquivos (%2$s) no local selecionado \"%3$s\".</string>
+    <string name="fold_unfold">ocultar/mostrar</string>
+    <string name="app_profile_type">Tipo de perfil de aplicativo</string>
+    <string name="map_marker_options">Opções de marcador de mapa</string>
+    <string name="reading_files">Lendo arquivos…</string>
+    <string name="memory_allocated_for_routing_ds">Alocação de memória mais alta irá acelerar o cálculo de rotas longas (mais de 500 km), mas pode afetar o desempenho de outros aplicativos.
+\nNão tem nenhum impacto na velocidade de cálculo de rotas curtas.</string>
+    <string name="exit_without_saving_warning">Sair sem salvar as alterações\?</string>
+    <string name="save_as_copy">Salvar como cópia</string>
+    <string name="gps_filter_actions_description">OsmAnd aplicará as alterações à trilha sem atualizar o arquivo. Você pode salvar as alterações manualmente.</string>
+    <string name="shared_string_gps_filter">Filtro GPS</string>
+    <string name="storage_migration_wrong_folder_warning">Nenhum dado OsmAnd encontrado na pasta selecionada. Por favor, tente novamente.</string>
+    <string name="ltr_or_rtl_combine">%1$s %2$s</string>
+    <string name="shared_string_downhill">Descida</string>
+    <string name="shared_string_hide_slope">Esconder inclinação</string>
+    <string name="shared_string_uphill">Subida</string>
+    <string name="elevation_profile">Perfil de elevação</string>
+    <string name="shared_string_show_slope">Mostrar inclinação</string>
+    <string name="shared_string_grade">Grau</string>
+    <string name="save_changes_into_file">Salvar alterações no arquivo</string>
+    <string name="gps_filter_precision">Precisão GPS</string>
+    <string name="gps_filter_smoothing">Alisamento</string>
+    <string name="shared_string_precision">Precisão</string>
+    <string name="shared_string_statistics">Estatísticas</string>
+    <string name="gps_filter_hdop_desc">Defina o valor máximo aceito para HDOP.
+\nOs pontos com valor mais alto serão ocultados.</string>
+    <string name="gps_filter_speed_altitude_desc">Apenas os pontos de trilha que correspondem ao intervalo definido aparecerão no gráfico e no mapa, o resto será ocultado.</string>
+    <string name="gps_filter_smoothing_desc">Defina a distância limite entre os pontos.
+\nOs pontos da trilha que não estejam a pelo menos esta distância do último ponto visível serão ocultados.
+\nEsteja ciente de que limites altos podem simplificar demais a geometria da trilha.</string>
+    <string name="distance_between_points">Distância entre pontos</string>
+    <string name="shared_string_size">Tamanho</string>
+    <string name="created_on">Criado em</string>
+    <string name="use_routing_fallback_description">Use o roteamento offline quando o roteamento online não puder ser alcançado.</string>
+    <string name="use_routing_fallback">Use fallback de roteamento</string>
+    <string name="waypoint_template">Modelo de ponto de trajeto</string>
+    <string name="always_ask_waypoint_appearance_description">Gravar a ação abrirá a tela “Adicionar ponto de trajeto”, onde você pode alterar o nome e a aparência.</string>
+    <string name="predefined_waypoint_appearance_description">Tocar na ação salvará automaticamente o ponto de trajeto com parâmetros predefinidos.</string>
+    <string name="track_file">Arquivo de trilha</string>
+    <string name="waypoint_appearance">Aparência do ponto de trajeto</string>
+    <string name="track_file_description">Gravar na ação mostrará um diálogo com todas as trilhas disponíveis para serem selecionadas.</string>
+    <string name="turn_arrows">Setas de volta</string>
+    <string name="turn_arrows_descr">Controle a visibilidade das setas de curva na linha de rota.</string>
+    <string name="navigate_point_format_swiss_grid">Rede Suíça (CH1903)</string>
+    <string name="navigate_point_format_swiss_grid_plus">Rede Suíça (CH1903+)</string>
+    <string name="shared_string_used">Usado</string>
+    <string name="files_with_route_restrictions">Arquivos com restrições de rota</string>
+    <string name="shared_string_not_used">Não usado</string>
+    <string name="shared_string_open_street_map">OpenStreetMap</string>
 </resources>

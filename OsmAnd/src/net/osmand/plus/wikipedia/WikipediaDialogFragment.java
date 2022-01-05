@@ -2,6 +2,7 @@ package net.osmand.plus.wikipedia;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -20,22 +21,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import net.osmand.AndroidUtils;
-import net.osmand.IndexConstants;
-import net.osmand.data.Amenity;
-import net.osmand.plus.ColorUtilities;
-import net.osmand.plus.OsmandApplication;
-import net.osmand.plus.OsmandPlugin;
-import net.osmand.plus.R;
-import net.osmand.plus.development.OsmandDevelopmentPlugin;
-import net.osmand.plus.helpers.FileNameTranslationHelper;
-import net.osmand.util.Algorithms;
-
-import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -45,6 +30,22 @@ import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
+
+import net.osmand.plus.utils.AndroidUtils;
+import net.osmand.IndexConstants;
+import net.osmand.data.Amenity;
+import net.osmand.plus.utils.ColorUtilities;
+import net.osmand.plus.OsmandApplication;
+import net.osmand.plus.plugins.OsmandPlugin;
+import net.osmand.plus.R;
+import net.osmand.plus.plugins.development.OsmandDevelopmentPlugin;
+import net.osmand.plus.helpers.FileNameTranslationHelper;
+import net.osmand.util.Algorithms;
+
+import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 
 public class WikipediaDialogFragment extends WikiArticleBaseDialogFragment {
@@ -249,9 +250,9 @@ public class WikipediaDialogFragment extends WikiArticleBaseDialogFragment {
 				.setToolbarColor(ColorUtilities.getAppBarColor(context, nightMode))
 				.build();
 		customTabsIntent.intent.setData(uri);
-		if (AndroidUtils.isIntentSafe(context, customTabsIntent.intent)) {
+		try {
 			customTabsIntent.launchUrl(context, uri);
-		} else {
+		} catch (ActivityNotFoundException e) {
 			Toast.makeText(context, R.string.no_activity_for_intent, Toast.LENGTH_LONG).show();
 		}
 	}

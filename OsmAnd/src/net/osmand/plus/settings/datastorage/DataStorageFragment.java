@@ -1,5 +1,59 @@
 package net.osmand.plus.settings.datastorage;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.graphics.drawable.Drawable;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.text.BidiFormatter;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import net.osmand.IProgress;
+import net.osmand.plus.OsmandApplication;
+import net.osmand.plus.ProgressImplementation;
+import net.osmand.plus.R;
+import net.osmand.plus.activities.MapActivity;
+import net.osmand.plus.activities.OsmandActionBarActivity;
+import net.osmand.plus.download.DownloadActivity;
+import net.osmand.plus.helpers.AndroidUiHelper;
+import net.osmand.plus.resources.ResourceManager.ReloadIndexesListener;
+import net.osmand.plus.settings.backend.OsmandSettings;
+import net.osmand.plus.settings.bottomsheets.ChangeDataStorageBottomSheet;
+import net.osmand.plus.settings.bottomsheets.SelectFolderBottomSheet;
+import net.osmand.plus.settings.datastorage.item.MemoryItem;
+import net.osmand.plus.settings.datastorage.item.StorageItem;
+import net.osmand.plus.settings.datastorage.task.MoveFilesTask;
+import net.osmand.plus.settings.datastorage.task.RefreshUsedMemoryTask;
+import net.osmand.plus.settings.fragments.BaseSettingsFragment;
+import net.osmand.plus.utils.AndroidUtils;
+import net.osmand.plus.utils.ColorUtilities;
+import net.osmand.plus.utils.FileUtils;
+import net.osmand.plus.utils.UiUtilities;
+import net.osmand.plus.utils.UiUtilities.DialogButtonType;
+
+import java.io.File;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.Fragment;
+import androidx.preference.CheckBoxPreference;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceScreen;
+import androidx.preference.PreferenceViewHolder;
+import androidx.recyclerview.widget.RecyclerView;
+
 import static net.osmand.plus.settings.bottomsheets.ChangeDataStorageBottomSheet.CHOSEN_DIRECTORY;
 import static net.osmand.plus.settings.bottomsheets.ChangeDataStorageBottomSheet.MOVE_DATA;
 import static net.osmand.plus.settings.bottomsheets.SelectFolderBottomSheet.NEW_PATH;
@@ -10,61 +64,17 @@ import static net.osmand.plus.settings.datastorage.DataStorageHelper.OTHER_MEMOR
 import static net.osmand.plus.settings.datastorage.DataStorageHelper.SHARED_STORAGE;
 import static net.osmand.plus.settings.datastorage.DataStorageHelper.TILES_MEMORY;
 import static net.osmand.plus.settings.datastorage.DataStorageHelper.UpdateMemoryInfoUIAdapter;
-
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.graphics.drawable.Drawable;
-import android.os.AsyncTask;
-import android.os.Bundle;
-import android.text.BidiFormatter;
-import android.view.View;
-import android.widget.ImageView;
-import android.widget.TextView;
-import android.widget.Toast;
-
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
-import androidx.core.app.ActivityCompat;
-import androidx.preference.CheckBoxPreference;
-import androidx.preference.Preference;
-import androidx.preference.PreferenceScreen;
-import androidx.preference.PreferenceViewHolder;
-
-import net.osmand.AndroidUtils;
-import net.osmand.FileUtils;
-import net.osmand.plus.ColorUtilities;
-import net.osmand.plus.OsmandApplication;
-import net.osmand.plus.R;
-import net.osmand.plus.UiUtilities;
-import net.osmand.plus.UiUtilities.DialogButtonType;
-import net.osmand.plus.activities.MapActivity;
-import net.osmand.plus.activities.OsmandActionBarActivity;
-import net.osmand.plus.download.DownloadActivity;
-import net.osmand.plus.helpers.AndroidUiHelper;
-import net.osmand.plus.settings.backend.OsmandSettings;
-import net.osmand.plus.settings.bottomsheets.ChangeDataStorageBottomSheet;
-import net.osmand.plus.settings.bottomsheets.SelectFolderBottomSheet;
-import net.osmand.plus.settings.datastorage.item.MemoryItem;
-import net.osmand.plus.settings.datastorage.item.StorageItem;
-import net.osmand.plus.settings.datastorage.task.MoveFilesTask;
-import net.osmand.plus.settings.datastorage.task.RefreshUsedMemoryTask;
-import net.osmand.plus.settings.datastorage.task.ReloadDataTask;
-import net.osmand.plus.settings.fragments.BaseSettingsFragment;
-
-import java.io.File;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
+import static net.osmand.plus.settings.datastorage.SharedStorageWarningFragment.STORAGE_MIGRATION;
 
 public class DataStorageFragment extends BaseSettingsFragment implements UpdateMemoryInfoUIAdapter {
+
 	public final static int PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 500;
 	public final static int UI_REFRESH_TIME_MS = 500;
 
 	private final static String CHANGE_DIRECTORY_BUTTON = "change_directory";
 	private final static String OSMAND_USAGE = "osmand_usage";
 
-	private ArrayList<StorageItem> storageItems;
+	private OsmandApplication app;
 	private ArrayList<MemoryItem> memoryItems;
 	private ArrayList<CheckBoxPreference> dataStorageRadioButtonsGroup;
 	private Preference changeButton;
@@ -76,13 +86,17 @@ public class DataStorageFragment extends BaseSettingsFragment implements UpdateM
 	private RefreshUsedMemoryTask calculateMemoryTask;
 	private RefreshUsedMemoryTask calculateTilesMemoryTask;
 
-	private OsmandApplication app;
 	private OsmandActionBarActivity activity;
+	boolean storageMigration;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		app = getMyApplication();
 		activity = getMyActivity();
+		Bundle args = getArguments();
+		if (args != null) {
+			storageMigration = args.getBoolean(STORAGE_MIGRATION, false);
+		}
 		if (dataStorageHelper == null) {
 			setRetainInstance(true);
 			refreshDataInfo();
@@ -91,19 +105,22 @@ public class DataStorageFragment extends BaseSettingsFragment implements UpdateM
 	}
 
 	@Override
+	public Bundle buildArguments() {
+		Bundle args = super.buildArguments();
+		args.putBoolean(STORAGE_MIGRATION, storageMigration);
+		return args;
+	}
+
+	@Override
 	protected void setupPreferences() {
-
 		PreferenceScreen screen = getPreferenceScreen();
-
 		if (screen == null || dataStorageHelper == null) {
 			return;
 		}
-
-		storageItems = dataStorageHelper.getStorageItems();
 		memoryItems = dataStorageHelper.getMemoryInfoItems();
 		dataStorageRadioButtonsGroup = new ArrayList<>();
 
-		for (StorageItem item : storageItems) {
+		for (StorageItem item : dataStorageHelper.getStorageItems()) {
 			CheckBoxPreference preference = new CheckBoxPreference(activity);
 			preference.setKey(item.getKey());
 			preference.setTitle(item.getTitle());
@@ -111,15 +128,23 @@ public class DataStorageFragment extends BaseSettingsFragment implements UpdateM
 			screen.addPreference(preference);
 			dataStorageRadioButtonsGroup.add(preference);
 		}
-
-		currentDataStorage = dataStorageHelper.getCurrentStorage();
+		Preference osmandUsage = findPreference(OSMAND_USAGE);
+		osmandUsage.setVisible(!storageMigration);
 
 		changeButton = new Preference(app);
 		changeButton.setKey(CHANGE_DIRECTORY_BUTTON);
 		changeButton.setLayoutResource(R.layout.bottom_sheet_item_btn_with_icon_and_text);
 		screen.addPreference(changeButton);
 
+		currentDataStorage = dataStorageHelper.getCurrentStorage();
 		updateView(currentDataStorage.getKey());
+	}
+
+	@Override
+	public RecyclerView onCreateRecyclerView(LayoutInflater inflater, ViewGroup parent, Bundle savedInstanceState) {
+		RecyclerView recyclerView = super.onCreateRecyclerView(inflater, parent, savedInstanceState);
+		recyclerView.setItemAnimator(null);
+		return recyclerView;
 	}
 
 	@Override
@@ -165,8 +190,12 @@ public class DataStorageFragment extends BaseSettingsFragment implements UpdateM
 						} catch (CloneNotSupportedException e) {
 							return false;
 						}
-						ChangeDataStorageBottomSheet.showInstance(getFragmentManager(), MANUALLY_SPECIFIED,
-								currentDataStorage, manuallySpecified, this, false);
+						if (storageMigration) {
+							confirm(app, activity, manuallySpecified, false);
+						} else {
+							ChangeDataStorageBottomSheet.showInstance(getFragmentManager(), MANUALLY_SPECIFIED,
+									currentDataStorage, manuallySpecified, this, false);
+						}
 					}
 				}
 			}
@@ -175,19 +204,19 @@ public class DataStorageFragment extends BaseSettingsFragment implements UpdateM
 			String key = preference.getKey();
 			if (key != null) {
 				StorageItem newDataStorage = dataStorageHelper.getStorage(key);
-				if (newDataStorage != null) {
-					if (!currentDataStorage.getKey().equals(newDataStorage.getKey())) {
-						if (newDataStorage.getType() == OsmandSettings.EXTERNAL_STORAGE_TYPE_DEFAULT
-								&& !DownloadActivity.hasPermissionToWriteExternalStorage(activity)) {
-							ActivityCompat.requestPermissions(activity,
-									new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE},
-									DataStorageFragment.PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
-						} else if (key.equals(MANUALLY_SPECIFIED)) {
-							showFolderSelectionDialog();
-						} else {
-							ChangeDataStorageBottomSheet.showInstance(getFragmentManager(), key,
-									currentDataStorage, newDataStorage, DataStorageFragment.this, false);
-						}
+				if (newDataStorage != null && !currentDataStorage.getKey().equals(newDataStorage.getKey())) {
+					if (newDataStorage.getType() == OsmandSettings.EXTERNAL_STORAGE_TYPE_DEFAULT
+							&& !DownloadActivity.hasPermissionToWriteExternalStorage(activity)) {
+						ActivityCompat.requestPermissions(activity,
+								new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE},
+								DataStorageFragment.PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
+					} else if (key.equals(MANUALLY_SPECIFIED)) {
+						showFolderSelectionDialog();
+					} else if (storageMigration) {
+						confirm(app, activity, newDataStorage, false);
+					} else {
+						ChangeDataStorageBottomSheet.showInstance(getFragmentManager(), key,
+								currentDataStorage, newDataStorage, DataStorageFragment.this, false);
 					}
 				}
 			}
@@ -349,7 +378,7 @@ public class DataStorageFragment extends BaseSettingsFragment implements UpdateM
 
 	private void setupDetailsButton(StorageItem item, View detailsButton) {
 		boolean sharedStorage = item.getKey().equals(SHARED_STORAGE);
-		AndroidUiHelper.updateVisibility(detailsButton, sharedStorage);
+		AndroidUiHelper.updateVisibility(detailsButton, sharedStorage && !storageMigration);
 
 		if (item.getKey().equals(SHARED_STORAGE)) {
 			detailsButton.setClickable(true);
@@ -357,7 +386,7 @@ public class DataStorageFragment extends BaseSettingsFragment implements UpdateM
 			detailsButton.setOnClickListener(v -> {
 				MapActivity mapActivity = getMapActivity();
 				if (mapActivity != null) {
-					SharedStorageWarningFragment.showInstance(mapActivity, false);
+					SharedStorageWarningFragment.showInstance(mapActivity.getSupportFragmentManager(), false);
 				}
 			});
 		}
@@ -473,12 +502,21 @@ public class DataStorageFragment extends BaseSettingsFragment implements UpdateM
 		File newDirectoryFile = new File(newDirectory);
 		boolean wr = FileUtils.isWritable(newDirectoryFile);
 		if (wr) {
-			app.setExternalStorageDirectory(type, newDirectory);
-			reloadData();
-			if (silentRestart) {
-				MapActivity.doRestart(activity);
+			if (storageMigration) {
+				Fragment target = getTargetFragment();
+				if (target instanceof StorageSelectionListener) {
+					((StorageSelectionListener) target).onStorageSelected(newStorageDirectory);
+				}
+				dismiss();
+				return;
 			} else {
-				app.restartApp(activity);
+				app.setExternalStorageDirectory(type, newDirectory);
+				reloadData();
+				if (silentRestart) {
+					MapActivity.doRestart(activity);
+				} else {
+					app.restartApp(activity);
+				}
 			}
 		} else {
 			Toast.makeText(activity, R.string.specified_directiory_not_writeable,
@@ -491,11 +529,33 @@ public class DataStorageFragment extends BaseSettingsFragment implements UpdateM
 	private void refreshDataInfo() {
 		calculateTilesBtnPressed = false;
 		dataStorageHelper = new DataStorageHelper(app);
-		calculateMemoryTask = dataStorageHelper.calculateMemoryUsedInfo(this);
+		if (!storageMigration) {
+			calculateMemoryTask = dataStorageHelper.calculateMemoryUsedInfo(this);
+		}
 	}
 
 	protected void reloadData() {
-		new ReloadDataTask(activity, app).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, (Void) null);
+		app.getResourceManager().reloadIndexesAsync(IProgress.EMPTY_PROGRESS, new ReloadIndexesListener() {
+
+			private ProgressImplementation progress;
+
+			@Override
+			public void reloadIndexesStarted() {
+				progress = ProgressImplementation.createProgressDialog(activity, getString(R.string.loading_data),
+						getString(R.string.loading_data), ProgressDialog.STYLE_HORIZONTAL);
+			}
+
+			@Override
+			public void reloadIndexesFinished(List<String> warnings) {
+				try {
+					if (progress.getDialog().isShowing()) {
+						progress.getDialog().dismiss();
+					}
+				} catch (Exception e) {
+					//ignored
+				}
+			}
+		});
 	}
 
 	@Override
@@ -509,5 +569,11 @@ public class DataStorageFragment extends BaseSettingsFragment implements UpdateM
 		if (tag != null && tag.equals(TILES_MEMORY)) {
 			app.getSettings().OSMAND_USAGE_SPACE.set(dataStorageHelper.getTotalUsedBytes());
 		}
+	}
+
+	public interface StorageSelectionListener {
+
+		void onStorageSelected(@NonNull StorageItem storageItem);
+
 	}
 }

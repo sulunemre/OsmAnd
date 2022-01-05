@@ -1,6 +1,5 @@
 package net.osmand.plus.routepreparationmenu.cards;
 
-import android.os.Build;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -10,10 +9,10 @@ import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
-import net.osmand.AndroidUtils;
+import net.osmand.plus.utils.AndroidUtils;
 import net.osmand.GPXUtilities;
 import net.osmand.GPXUtilities.GPXFile;
-import net.osmand.plus.OsmAndFormatter;
+import net.osmand.plus.utils.OsmAndFormatter;
 import net.osmand.plus.R;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.helpers.GpxUiHelper;
@@ -88,44 +87,30 @@ public class SimpleRouteCard extends MapBaseCard {
 		durationText.setText(OsmAndFormatter.getFormattedDuration(routingHelper.getLeftTime(), app));
 		durationTitle.setText(app.getString(R.string.arrive_at_time, OsmAndFormatter.getFormattedTime(routingHelper.getLeftTime(), true)));
 
-		view.findViewById(R.id.details_button).setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				CardListener listener = getListener();
-				if (listener != null) {
-					listener.onCardButtonPressed(SimpleRouteCard.this, 0);
-				}
-			}
-		});
+		view.findViewById(R.id.details_button).setOnClickListener(v -> notifyButtonPressed(0));
 
 		FrameLayout detailsButton = view.findViewById(R.id.details_button);
-		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP) {
-			AndroidUtils.setBackground(app, detailsButton, nightMode, R.drawable.btn_border_light, R.drawable.btn_border_dark);
-			AndroidUtils.setBackground(app, view.findViewById(R.id.details_button_descr), nightMode, R.drawable.ripple_light, R.drawable.ripple_dark);
-		} else {
-			AndroidUtils.setBackground(app, view.findViewById(R.id.details_button_descr), nightMode, R.drawable.btn_border_trans_light, R.drawable.btn_border_trans_dark);
-		}
+		AndroidUtils.setBackground(app, detailsButton, nightMode, R.drawable.btn_border_light, R.drawable.btn_border_dark);
+		AndroidUtils.setBackground(app, view.findViewById(R.id.details_button_descr), nightMode, R.drawable.ripple_light, R.drawable.ripple_dark);
 
 		buildHeader(view);
 	}
 
 	private void buildHeader(View headerView) {
-		final LineChart mChart = (LineChart) headerView.findViewById(R.id.chart);
+		final LineChart mChart = headerView.findViewById(R.id.chart);
 		final GPXUtilities.GPXTrackAnalysis analysis = gpx.getAnalysis(0);
 
-		GpxUiHelper.setupGPXChart(mChart, 4, 10f, 4f, !nightMode, false);
+		GpxUiHelper.setupGPXChart(mChart, 10f, 4f, false);
 		if (analysis.hasElevationData) {
 			LineData data = this.data;
 			if (data == null) {
 				List<ILineDataSet> dataSets = new ArrayList<>();
-				OrderedLineDataSet slopeDataSet = null;
+				OrderedLineDataSet slopeDataSet;
 				OrderedLineDataSet elevationDataSet = GpxUiHelper.createGPXElevationDataSet(app, mChart, analysis,
 						GpxUiHelper.GPXDataSetAxisType.DISTANCE, false, true, false);
-				if (elevationDataSet != null) {
-					dataSets.add(elevationDataSet);
-					slopeDataSet = GpxUiHelper.createGPXSlopeDataSet(app, mChart, analysis,
-							GpxUiHelper.GPXDataSetAxisType.DISTANCE, elevationDataSet.getValues(), true, true, false);
-				}
+				dataSets.add(elevationDataSet);
+				slopeDataSet = GpxUiHelper.createGPXSlopeDataSet(app, mChart, analysis,
+						GpxUiHelper.GPXDataSetAxisType.DISTANCE, elevationDataSet.getValues(), true, true, false);
 				if (slopeDataSet != null) {
 					dataSets.add(slopeDataSet);
 				}

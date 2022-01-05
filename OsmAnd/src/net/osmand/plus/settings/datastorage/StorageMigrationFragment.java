@@ -18,13 +18,13 @@ import androidx.core.view.ViewCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 
-import net.osmand.AndroidUtils;
+import net.osmand.plus.utils.AndroidUtils;
 import net.osmand.IndexConstants;
-import net.osmand.plus.ColorUtilities;
+import net.osmand.plus.utils.ColorUtilities;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
-import net.osmand.plus.UiUtilities;
-import net.osmand.plus.UiUtilities.DialogButtonType;
+import net.osmand.plus.utils.UiUtilities;
+import net.osmand.plus.utils.UiUtilities.DialogButtonType;
 import net.osmand.plus.activities.MapActivity;
 import net.osmand.plus.base.BaseOsmAndDialogFragment;
 import net.osmand.plus.base.BasicProgressAsyncTask;
@@ -34,6 +34,7 @@ import net.osmand.plus.helpers.FontCache;
 import net.osmand.plus.helpers.GpxUiHelper;
 import net.osmand.plus.settings.backend.backup.items.FileSettingsItem.FileSubtype;
 import net.osmand.plus.settings.datastorage.StorageMigrationAsyncTask.StorageMigrationListener;
+import net.osmand.plus.settings.datastorage.item.StorageItem;
 import net.osmand.plus.widgets.style.CustomTypefaceSpan;
 import net.osmand.util.Algorithms;
 
@@ -47,8 +48,19 @@ public class StorageMigrationFragment extends BaseOsmAndDialogFragment implement
 
 	private static final String TAG = StorageMigrationFragment.class.getSimpleName();
 
+	private static final String USED_ON_MAP_KEY = "used_on_map";
+	private static final String FILES_COUNT_KEY = "files_count";
+	private static final String REMAINING_COUNT_KEY = "remaining_count";
+	private static final String GENERAL_PROGRESS_KEY = "general_progress";
+	private static final String REMAINING_SIZE_KEY = "remaining_size";
+	private static final String COPY_FINISHED_KEY = "copy_finished";
+	private static final String FILES_SIZE_KEY = "files_size";
+	private static final String ESTIMATED_SIZE_KEY = "estimated_size";
+	private static final String EXISTING_FILES_KEY = "existing_files";
+	private static final String SELECTED_STORAGE_KEY = "selected_storage";
+
 	private OsmandApplication app;
-	private DataStorageHelper dataStorageHelper;
+	private StorageItem selectedStorage;
 
 	private View mainView;
 	private View remainingFiles;
@@ -56,11 +68,11 @@ public class StorageMigrationFragment extends BaseOsmAndDialogFragment implement
 	private TextView progressTitle;
 	private ProgressBar progressBar;
 
+	private Pair<Long, Long> filesSize;
 	private Map<String, Pair<String, Long>> errors = new HashMap<>();
 	private List<File> existingFiles = new ArrayList<>();
 
 	private int filesCount;
-	private long filesSize;
 	private long remainingSize;
 	private int remainingCount;
 	private int generalProgress;
@@ -73,7 +85,26 @@ public class StorageMigrationFragment extends BaseOsmAndDialogFragment implement
 	public void onCreate(@Nullable Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		app = getMyApplication();
-		dataStorageHelper = new DataStorageHelper(app);
+		if (savedInstanceState != null && filesSize == null) {
+			filesCount = savedInstanceState.getInt(FILES_COUNT_KEY);
+			remainingSize = savedInstanceState.getLong(REMAINING_SIZE_KEY);
+			remainingCount = savedInstanceState.getInt(REMAINING_COUNT_KEY);
+			generalProgress = savedInstanceState.getInt(GENERAL_PROGRESS_KEY);
+			copyFinished = savedInstanceState.getBoolean(COPY_FINISHED_KEY);
+			usedOnMap = savedInstanceState.getBoolean(USED_ON_MAP_KEY);
+			selectedStorage = savedInstanceState.getParcelable(SELECTED_STORAGE_KEY);
+
+			long size = savedInstanceState.getLong(FILES_SIZE_KEY);
+			long estimatedSize = savedInstanceState.getLong(ESTIMATED_SIZE_KEY);
+			filesSize = new Pair<>(size, estimatedSize);
+
+			ArrayList<String> filePaths = savedInstanceState.getStringArrayList(EXISTING_FILES_KEY);
+			if (filePaths != null) {
+				for (String path : filePaths) {
+					existingFiles.add(new File(path));
+				}
+			}
+		}
 		nightMode = isNightMode(usedOnMap);
 	}
 
@@ -87,6 +118,26 @@ public class StorageMigrationFragment extends BaseOsmAndDialogFragment implement
 		updateContent();
 
 		return mainView;
+	}
+
+	@Override
+	public void onSaveInstanceState(@NonNull Bundle outState) {
+		super.onSaveInstanceState(outState);
+		outState.putInt(FILES_COUNT_KEY, filesCount);
+		outState.putLong(REMAINING_SIZE_KEY, remainingSize);
+		outState.putInt(REMAINING_COUNT_KEY, remainingCount);
+		outState.putInt(GENERAL_PROGRESS_KEY, generalProgress);
+		outState.putBoolean(COPY_FINISHED_KEY, copyFinished);
+		outState.putBoolean(USED_ON_MAP_KEY, usedOnMap);
+		outState.putLong(FILES_SIZE_KEY, filesSize.first);
+		outState.putLong(ESTIMATED_SIZE_KEY, filesSize.second);
+		outState.putParcelable(SELECTED_STORAGE_KEY, selectedStorage);
+
+		ArrayList<String> filePaths = new ArrayList<>();
+		for (File file : existingFiles) {
+			filePaths.add(file.getPath());
+		}
+		outState.putStringArrayList(EXISTING_FILES_KEY, filePaths);
 	}
 
 	private void updateContent() {
@@ -130,7 +181,7 @@ public class StorageMigrationFragment extends BaseOsmAndDialogFragment implement
 		copyFilesDescr = mainView.findViewById(R.id.copy_files_descr);
 
 		progressBar.setMin(0);
-		progressBar.setMax((int) (filesSize / 1024));
+		progressBar.setMax((int) (filesSize.second / 1024));
 
 		setupFilesTitle();
 		setupFilesDescr();
@@ -139,7 +190,6 @@ public class StorageMigrationFragment extends BaseOsmAndDialogFragment implement
 	}
 
 	private void updateProgress(int progress) {
-		generalProgress = progress;
 		progressBar.setProgress(progress);
 
 		int maxProgress = progressBar.getMax();
@@ -149,7 +199,7 @@ public class StorageMigrationFragment extends BaseOsmAndDialogFragment implement
 
 	private void setupFilesTitle() {
 		String amount = String.valueOf(filesCount);
-		String formattedSize = "(" + AndroidUtils.formatSize(app, filesSize) + ")";
+		String formattedSize = "(" + AndroidUtils.formatSize(app, filesSize.first) + ")";
 		String warning = getString(copyFinished ? R.string.storage_copied_files_size : R.string.storage_copying_files_size, amount, formattedSize);
 
 		SpannableStringBuilder spannable = new SpannableStringBuilder(warning);
@@ -171,7 +221,7 @@ public class StorageMigrationFragment extends BaseOsmAndDialogFragment implement
 				for (File file : existingFiles) {
 					size += file.length();
 				}
-				String currentStorage = dataStorageHelper.getCurrentStorage().getTitle();
+				String currentStorage = selectedStorage.getTitle();
 				spannable.append("\n").append(getString(R.string.migration_files_present,
 						existingFiles.size(), AndroidUtils.formatSize(app, size), currentStorage));
 			}
@@ -183,7 +233,7 @@ public class StorageMigrationFragment extends BaseOsmAndDialogFragment implement
 
 	private void setupFilesDescr() {
 		String sharedStorage = "\"" + getString(R.string.shared_storage) + "\"";
-		String currentStorage = "\"" + dataStorageHelper.getCurrentStorage().getTitle() + "\"";
+		String currentStorage = "\"" + selectedStorage.getTitle() + "\"";
 		String description = getString(R.string.from_to_with_params, sharedStorage, currentStorage);
 
 		TextView summary = copyFilesDescr.findViewById(android.R.id.summary);
@@ -215,41 +265,47 @@ public class StorageMigrationFragment extends BaseOsmAndDialogFragment implement
 		title.setText(spannable);
 
 		AndroidUiHelper.updateVisibility(remainingFiles, !copyFinished);
-		AndroidUiHelper.updateVisibility(remainingFiles.findViewById(android.R.id.icon), false);
 	}
 
 	@Override
 	public void onFileCopyStarted(@NonNull String path) {
-		String fileName = Algorithms.getFileWithoutDirs(path);
-		FileSubtype subtype = FileSubtype.getSubtypeByFileName(path);
-		if (subtype == FileSubtype.TILES_MAP) {
-			fileName = path.replace(IndexConstants.TILES_INDEX_DIR, "");
-		} else if (subtype.isMap() || subtype == FileSubtype.TTS_VOICE || subtype == FileSubtype.VOICE) {
-			fileName = FileNameTranslationHelper.getFileNameWithRegion(app, fileName);
-		} else if (subtype == FileSubtype.GPX) {
-			fileName = GpxUiHelper.getGpxTitle(fileName);
+		if (isAdded()) {
+			String fileName = Algorithms.getFileWithoutDirs(path);
+			FileSubtype subtype = FileSubtype.getSubtypeByFileName(path);
+			if (subtype == FileSubtype.TILES_MAP) {
+				fileName = path.replace(IndexConstants.TILES_INDEX_DIR, "");
+			} else if (subtype.isMap() || subtype == FileSubtype.TTS_VOICE || subtype == FileSubtype.VOICE) {
+				fileName = FileNameTranslationHelper.getFileNameWithRegion(app, fileName);
+			} else if (subtype == FileSubtype.GPX) {
+				fileName = GpxUiHelper.getGpxTitle(fileName);
+			}
+
+			String description = getString(R.string.copying_file, fileName);
+			SpannableString spannable = new SpannableString(description);
+			int index = description.indexOf(fileName);
+			spannable.setSpan(new CustomTypefaceSpan(FontCache.getRobotoMedium(app)), index, index + fileName.length(), 0);
+			spannable.setSpan(new ForegroundColorSpan(ColorUtilities.getActiveColor(app, nightMode)), index, index + fileName.length(), 0);
+
+			TextView summary = remainingFiles.findViewById(android.R.id.summary);
+			summary.setText(spannable);
 		}
-
-		String description = getString(R.string.copying_file, fileName);
-		SpannableString spannable = new SpannableString(description);
-		int index = description.indexOf(fileName);
-		spannable.setSpan(new CustomTypefaceSpan(FontCache.getRobotoMedium(app)), index, index + fileName.length(), 0);
-		spannable.setSpan(new ForegroundColorSpan(ColorUtilities.getActiveColor(app, nightMode)), index, index + fileName.length(), 0);
-
-		TextView summary = remainingFiles.findViewById(android.R.id.summary);
-		summary.setText(spannable);
 	}
 
 	@Override
 	public void onRemainingFilesUpdate(@NonNull Pair<Integer, Long> pair) {
 		remainingSize = pair.second;
 		remainingCount = pair.first;
-		setupRemainingFiles();
+		if (isAdded()) {
+			setupRemainingFiles();
+		}
 	}
 
 	@Override
 	public void onFilesCopyProgress(int progress) {
-		updateProgress(progress);
+		generalProgress = progress;
+		if (isAdded()) {
+			updateProgress(progress);
+		}
 	}
 
 	@Override
@@ -257,17 +313,26 @@ public class StorageMigrationFragment extends BaseOsmAndDialogFragment implement
 		copyFinished = true;
 		this.errors = errors;
 		this.existingFiles = existingFiles;
-		generalProgress = (int) (filesSize / 1024);
-		updateContent();
+		generalProgress = (int) (filesSize.second / 1024);
+		app.getSettings().SHARED_STORAGE_MIGRATION_FINISHED.set(true);
+
+		if (isAdded()) {
+			updateContent();
+		}
 	}
 
-	public static StorageMigrationListener showInstance(@NonNull FragmentManager fragmentManager, int generalProgress,
-	                                                    int filesCount, long filesSize, boolean usedOnMap) {
+	public static StorageMigrationListener showInstance(@NonNull FragmentManager fragmentManager,
+	                                                    @NonNull StorageItem selectedStorage,
+	                                                    @NonNull Pair<Long, Long> filesSize,
+	                                                    int generalProgress,
+	                                                    int filesCount,
+	                                                    boolean usedOnMap) {
 		if (AndroidUtils.isFragmentCanBeAdded(fragmentManager, TAG)) {
 			StorageMigrationFragment fragment = new StorageMigrationFragment();
 			fragment.usedOnMap = usedOnMap;
 			fragment.filesSize = filesSize;
 			fragment.filesCount = filesCount;
+			fragment.selectedStorage = selectedStorage;
 			fragment.generalProgress = generalProgress;
 			fragment.setRetainInstance(true);
 			fragment.show(fragmentManager, TAG);

@@ -13,7 +13,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 
-import net.osmand.AndroidUtils;
+import net.osmand.plus.utils.AndroidUtils;
 import net.osmand.plus.OsmandApplication;
 import net.osmand.plus.R;
 import net.osmand.plus.Version;
@@ -64,8 +64,9 @@ public class WhatsNewDialogFragment extends DialogFragment {
 		MapActivity mapActivity = getMapActivity();
 		if (mapActivity != null) {
 			OsmandApplication app = requireMyApplication();
-			if (SharedStorageWarningFragment.dialogShowRequired(app)) {
-				SharedStorageWarningFragment.showInstance(mapActivity, true);
+			if (mapActivity.getFragment(SharedStorageWarningFragment.TAG) == null
+					&& SharedStorageWarningFragment.dialogShowRequired(app)) {
+				SharedStorageWarningFragment.showInstance(mapActivity.getSupportFragmentManager(), true);
 			}
 		}
 	}

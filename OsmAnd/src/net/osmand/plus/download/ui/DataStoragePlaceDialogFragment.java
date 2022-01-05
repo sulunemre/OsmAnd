@@ -2,8 +2,8 @@ package net.osmand.plus.download.ui;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -17,25 +17,29 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-
-import net.osmand.AndroidUtils;
-import net.osmand.FileUtils;
 import net.osmand.IProgress;
 import net.osmand.plus.OnDismissDialogFragmentListener;
 import net.osmand.plus.OsmandApplication;
+import net.osmand.plus.ProgressImplementation;
 import net.osmand.plus.R;
 import net.osmand.plus.base.BottomSheetDialogFragment;
-import net.osmand.plus.dashboard.ReloadData;
 import net.osmand.plus.download.DownloadActivity;
+import net.osmand.plus.resources.ResourceManager.ReloadIndexesListener;
 import net.osmand.plus.settings.backend.OsmandSettings;
 import net.osmand.plus.settings.datastorage.DataStorageHelper;
 import net.osmand.plus.settings.datastorage.item.StorageItem;
+import net.osmand.plus.utils.AndroidUtils;
+import net.osmand.plus.utils.FileUtils;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
+import java.util.List;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.fragment.app.FragmentManager;
 
 public class DataStoragePlaceDialogFragment extends BottomSheetDialogFragment {
 
@@ -136,12 +140,15 @@ public class DataStoragePlaceDialogFragment extends BottomSheetDialogFragment {
 			icon.setImageDrawable(getContentIcon(item.getNotSelectedIconResId()));
 
 			itemView.setOnClickListener(v -> {
-				int type = item.getType();
-				boolean res = saveFilesLocation(type, dir);
-				checkAssets();
-				updateDownloadIndexes();
-				if (res || OsmandSettings.EXTERNAL_STORAGE_TYPE_EXTERNAL_FILE != type) {
-					dismiss();
+				FragmentActivity activity = getActivity();
+				if (activity != null) {
+					int type = item.getType();
+					boolean res = saveFilesLocation(app, activity, type, dir);
+					checkAssets(app);
+					updateDownloadIndexes(app);
+					if (res || OsmandSettings.EXTERNAL_STORAGE_TYPE_EXTERNAL_FILE != type) {
+						dismiss();
+					}
 				}
 			});
 			itemsContainer.addView(itemView);
@@ -167,27 +174,51 @@ public class DataStoragePlaceDialogFragment extends BottomSheetDialogFragment {
 				.getDefaultInternalStorage();
 	}
 
-	private void checkAssets() {
-		app.getResourceManager().checkAssets(IProgress.EMPTY_PROGRESS, true);
+	public static void checkAssets(@NonNull OsmandApplication app) {
+		app.getResourceManager().checkAssets(IProgress.EMPTY_PROGRESS, true, false);
 	}
 
-	private void updateDownloadIndexes() {
+	public static void updateDownloadIndexes(@NonNull OsmandApplication app) {
 		app.getDownloadThread().runReloadIndexFilesSilent();
 	}
 
-	public boolean saveFilesLocation(int type, File selectedFile) {
+	public static boolean saveFilesLocation(@NonNull OsmandApplication app, @NonNull FragmentActivity activity, int type, @NonNull File selectedFile) {
 		boolean writable = FileUtils.isWritable(selectedFile);
 		if (writable) {
 			app.setExternalStorageDirectory(type, selectedFile.getAbsolutePath());
-			reloadData();
+			reloadData(app, activity);
 		} else {
 			app.showToastMessage(R.string.specified_directiory_not_writeable);
 		}
 		return writable;
 	}
 
-	private void reloadData() {
-		new ReloadData(getActivity(), app).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, (Void) null);
+	private static void reloadData(@NonNull OsmandApplication app, @NonNull FragmentActivity activity) {
+		final WeakReference<FragmentActivity> activityRef = new WeakReference<>((FragmentActivity) activity);
+		app.getResourceManager().reloadIndexesAsync(IProgress.EMPTY_PROGRESS, new ReloadIndexesListener() {
+
+			private ProgressImplementation progress;
+
+			@Override
+			public void reloadIndexesStarted() {
+				FragmentActivity activity = activityRef.get();
+				if (activity != null) {
+					progress = ProgressImplementation.createProgressDialog(activity, app.getString(R.string.loading_data),
+							app.getString(R.string.loading_data), ProgressDialog.STYLE_HORIZONTAL);
+				}
+			}
+
+			@Override
+			public void reloadIndexesFinished(List<String> warnings) {
+				try {
+					if (progress != null && progress.getDialog().isShowing()) {
+						progress.getDialog().dismiss();
+					}
+				} catch (Exception e) {
+					//ignored
+				}
+			}
+		});
 	}
 
 	public static void showInstance(@NonNull FragmentManager fragmentManager, @Nullable Fragment target, boolean storageReadOnly) {

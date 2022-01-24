@@ -59,6 +59,15 @@ public class DataTileManager<T> {
 		return l;
 	}
 	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public List<List<T>> getAllEditObjects() {
+		List<List<T>> l = new ArrayList<>();
+		for (List s : objects.valueCollection()) {
+			l.add(s);
+		}
+		return l;
+	}
+	
 	public List<T> getObjects(double latitudeUp, double longitudeUp, double latitudeDown, double longitudeDown) {
 		int tileXUp = (int) MapUtils.getTileNumberX(zoom, longitudeUp);
 		int tileYUp = (int) MapUtils.getTileNumberY(zoom, latitudeUp);

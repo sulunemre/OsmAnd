@@ -272,13 +272,19 @@ public class RoutePlannerFrontEnd {
 									start.routeToTarget = null;
 									routeFound = false;
 									break;
+								} else {
+									routeFound = isRouteCloseToGpxPoints(gctx, gpxPoints, start, next);
+									if (gctx.ctx.getVisitor() != null) {
+										gctx.ctx.getVisitor().visitApproximatedSegments(start.routeToTarget, start, next);
+									}
 								}
 							}
 						}
 						if (!routeFound) {
 							// route is not found move next point closer to start point (distance / 2)
 							routeDist = routeDist / 2;
-							if (routeDist < gctx.MINIMUM_STEP_APPROXIMATION && routeDist > gctx.MINIMUM_STEP_APPROXIMATION / 2 + 1) {
+							if (routeDist < gctx.MINIMUM_STEP_APPROXIMATION
+									&& routeDist > gctx.MINIMUM_STEP_APPROXIMATION / 2 + 1) {
 								routeDist = gctx.MINIMUM_STEP_APPROXIMATION;
 							}
 							next = findNextGpxPointWithin(gpxPoints, start, routeDist);
@@ -320,6 +326,28 @@ public class RoutePlannerFrontEnd {
 			resultMatcher.publish(gctx.ctx.calculationProgress.isCancelled ? null : gctx);
 		}
 		return gctx;
+	}
+	
+	private boolean isRouteCloseToGpxPoints(GpxRouteApproximation gctx, List<GpxPoint> gpxPoints,
+	                                        GpxPoint start, GpxPoint next) {
+		boolean routeIsClose = true;
+		for (RouteSegmentResult r : start.routeToTarget) {
+			int st = r.getStartPointIndex();
+			int end = r.getEndPointIndex();
+			while (st != end) {
+				LatLon point = r.getPoint(st);
+				boolean pointIsClosed = false;
+				for (int k = Math.max(start.ind, 0); !pointIsClosed && k < next.ind; k++) {
+					pointIsClosed = pointCloseEnough(gctx, point, gpxPoints.get(k), gpxPoints.get(k + 1));
+				}
+				if (!pointIsClosed) {
+					routeIsClose = false;
+					break;
+				}
+				st += ((st < end) ? 1 : -1);
+			}
+		}
+		return routeIsClose;
 	}
 
 	private boolean stepBackAndFindPrevPointInRoute(GpxRouteApproximation gctx,
@@ -620,8 +648,20 @@ public class RoutePlannerFrontEnd {
 				start.routeToTarget = res;
 				start.targetInd = target.ind;
 			}
+			if (gctx.ctx.getVisitor() != null) {
+				gctx.ctx.getVisitor().visitApproximatedSegments(res, start, target);
+			}
 		}
 		return routeIsCorrect;
+	}
+	
+	private boolean pointCloseEnough(GpxRouteApproximation gctx, LatLon point, GpxPoint gpxPoint, GpxPoint gpxPointNext) {
+		LatLon gpxPointLL = gpxPoint.pnt != null ? gpxPoint.pnt.getPreciseLatLon() : gpxPoint.loc;
+		LatLon gpxPointNextLL = gpxPointNext.pnt != null ? gpxPointNext.pnt.getPreciseLatLon() : gpxPointNext.loc;
+		LatLon projection = MapUtils.getProjection(point.getLatitude(), point.getLongitude(),
+				gpxPointLL.getLatitude(), gpxPointLL.getLongitude(),
+				gpxPointNextLL.getLatitude(), gpxPointNextLL.getLongitude());
+		return MapUtils.getDistance(projection, point) <= gctx.MINIMUM_POINT_APPROXIMATION;
 	}
 
 	private boolean pointCloseEnough(GpxRouteApproximation gctx, GpxPoint ipoint, List<RouteSegmentResult> res) {

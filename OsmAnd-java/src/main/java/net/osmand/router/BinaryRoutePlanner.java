@@ -904,6 +904,8 @@ public class BinaryRoutePlanner {
 	public interface RouteSegmentVisitor {
 		
 		public void visitSegment(RouteSegment segment, int segmentEnd, boolean poll);
+		
+		void visitApproximatedSegments(List<RouteSegmentResult> segment, RoutePlannerFrontEnd.GpxPoint start, RoutePlannerFrontEnd.GpxPoint target);
 	}
 	
 	public static class RouteSegmentPoint extends RouteSegment {
